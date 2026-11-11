@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 9.3pt; color: #222; line-height: 1.28; }
+  header { text-align: center; border-bottom: 2px solid #1f4e79; padding-bottom: 4px; margin-bottom: 5px; }
+  h1 { font-size: 18pt; color: #1f4e79; letter-spacing: .5px; }
+  .titulo { font-size: 11pt; font-weight: 600; color: #444; margin-top: 1px; }
+  .contato { font-size: 8.5pt; color: #555; margin-top: 2px; }
+  h2 { font-size: 10pt; color: #1f4e79; text-transform: uppercase; letter-spacing: .5px;
+       border-bottom: 1px solid #ccc; margin: 6px 0 3px; padding-bottom: 1px; }
+  .item { margin-bottom: 3px; page-break-inside: avoid; }
+  .topo { display: flex; justify-content: space-between; font-weight: 600; }
+  .periodo { font-weight: 400; color: #666; font-size: 8.5pt; }
+  ul { margin: 1px 0 0 15px; }
+  li { margin-bottom: 1px; }
+  a { color: #1f4e79; text-decoration: none; }
+  .link { font-size: 8pt; }
+  .skills { columns: 3; column-gap: 14px; margin-left: 0; font-size: 8.8pt; }
+  .skills li { list-style: none; break-inside: avoid; white-space: nowrap; }
+  .skills li::before { content: "▸ "; color: #1f4e79; }
+  .linha-final { display: flex; gap: 24px; page-break-inside: avoid; break-inside: avoid; }
+  .linha-final > div { flex: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>{{ p.nome }}</h1>
+  <div class="titulo">{{ cv.titulos[0] }}</div>
+  <div class="contato">
+    {{ p.cidade }} | {{ p.telefone }} | <a href="mailto:{{ p.email }}">{{ p.email }}</a><br>
+    <a href="{{ p.linkedin }}">{{ p.linkedin | replace("https://www.", "") | trim("/") }}</a> |
+    <a href="{{ p.github }}">{{ p.github | replace("https://", "") }}</a>
+  </div>
+</header>
+
+<h2>Resumo</h2>
+<p>{{ resumo }}</p>
+
+{% macro bloco_projetos() %}
+<h2>Projetos de QA</h2>
+{% for pr in cv.projetos %}
+<div class="item">
+  <div class="topo"><span>{{ pr.nome }}</span></div>
+  <p>{{ pr.texto }}</p>
+  {% if pr.link %}<a class="link" href="{{ pr.link }}">{{ pr.link | replace("https://", "") }}</a>{% endif %}
+</div>
+{% endfor %}
+{% endmacro %}
+
+{% macro bloco_experiencias() %}
+<h2>Experiência</h2>
+{% for e in cv.experiencias %}
+<div class="item">
+  <div class="topo">
+    <span>{{ e.cargo }} | {{ e.empresa }}</span>
+    <span class="periodo">{{ e.inicio }} – {{ e.fim }}</span>
+  </div>
+  <ul>{% for b in e.bullets %}<li>{{ b.texto }}</li>{% endfor %}</ul>
+</div>
+{% endfor %}
+{% endmacro %}
+
+{% if projetos_primeiro %}{{ bloco_projetos() }}{{ bloco_experiencias() }}
+{% else %}{{ bloco_experiencias() }}{{ bloco_projetos() }}{% endif %}
+
+<h2>Competências</h2>
+<ul class="skills">
+  {% for s in cv.skills %}<li>{{ s.nome }}</li>{% endfor %}
+</ul>
+
+<div class="linha-final">
+  <div>
+    <h2>Formação</h2>
+    {% for f in cv.formacao %}
+    <div class="item">
+      <div class="topo">
+        <span>{{ f.curso }}{% if f.instituicao %} | {{ f.instituicao }}{% endif %}</span>
+      </div>
+      <span class="periodo">{{ f.inicio }} – {{ f.fim }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if cv.idiomas %}
+  <div>
+    <h2>Idiomas</h2>
+    <ul>
+      {% for i in cv.idiomas %}
+        {% if i is mapping %}
+          {% set nome_idioma = i.nome or i.idioma or i.lingua or i.language %}
+          {% set nivel = i.nivel or i.level %}
+          <li><strong>{{ nome_idioma }}</strong>{% if nivel %} – {{ nivel }}{% endif %}</li>
+        {% else %}
+          <li>{{ i }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>

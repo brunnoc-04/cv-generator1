@@ -1,0 +1,151 @@
+# Fonte de fatos complementar ao base.yaml.
+# A IA pode REESCREVER estes fatos, nunca criar novos.
+
+respostas:
+  # ---------- NyxCom ----------
+  - id: bug_duplicacao
+    empresa: NyxCom
+    tags: [exploratorio, bug, critico, regras_negocio, valor_limite]
+    pergunta: Qual foi o bug mais crítico que você encontrou?
+    resposta: >
+      Na validação de uma funcionalidade de vendas assíncronas (loja ativa com o usuário offline),
+      o requisito previa operação em apenas um servidor e uma região. Sem casos de teste definidos
+      pelo dev, apliquei teste exploratório nas fronteiras do requisito: a funcionalidade operava
+      indevidamente em outros servidores e regiões, e a troca de servidor duplicava a loja, permitindo
+      duplicar itens. Reportei, o dev corrigiu e houve zero ocorrências em produção, evitando
+      desequilíbrio na economia e perda de credibilidade com os usuários.
+
+  - id: bug_overflow_moeda
+    empresa: NyxCom
+    tags: [exploratorio, bug, critico, banco_dados, calculo]
+    pergunta: Encontrou outra falha relevante?
+    resposta: >
+      Identifiquei uma falha de cálculo em que a combinação de bônus ultrapassava 100% de chance,
+      gerando overflow e execução repetida da operação no banco, o que multiplicava em ~10x a moeda
+      creditada. Reportei e a correção foi rápida, limitando o impacto na economia.
+
+  - id: regressao_patches
+    empresa: NyxCom
+    tags: [regressao, manual, release, logs, reteste]
+    pergunta: Como funcionava o ciclo de testes?
+    resposta: >
+      Releases a cada 15 dias (semanais em períodos de evento). Testava as alterações do ciclo e
+      fazia regressão no entorno: ao incluir um item novo em uma loja, validava compra, desconto e
+      todos os demais itens e vendedores, garantindo que nenhum valor fosse debitado ou creditado
+      incorretamente. Em bugs críticos, coletava o log de erros do servidor para o dev rastrear a
+      causa raiz, reproduzia a falha sob demanda e fazia o reteste da correção.
+
+  - id: tipos_bugs
+    empresa: NyxCom
+    tags: [visual, ui, funcional, timing]
+    pergunta: Que tipos de bug eram frequentes?
+    resposta: >
+      Bugs visuais (texturas e elementos gráficos que não carregavam) e falhas de agendamento
+      (eventos e entidades que não eram gerados nos horários configurados).
+
+  - id: sql_nyxcom
+    empresa: NyxCom
+    tags: [sql, banco_dados, mysql, planejamento]
+    pergunta: Como usava SQL?
+    resposta: >
+      Consultas em MySQL via Navicat, com permissão do dev, para verificar configurações e regras de
+      negócio (taxas, quantidades, variações por área) e definir o escopo dos testes. Uso pontual,
+      a serviço do planejamento e da verificação de testes; não sou especialista em banco de dados.
+
+  - id: time_nyxcom
+    empresa: NyxCom
+    tags: [time, colaboracao]
+    pergunta: Como era o time?
+    resposta: >
+      Time de 4 pessoas (dev, eu como testador principal, um testador/designer de mapas e um
+      designer). Entrei em 2017 com produção de conteúdo e assumi o papel de testador principal
+      por confiança conquistada.
+
+  - id: produto_nyxcom
+    empresa: NyxCom
+    tags: [produto, feedback, ux, negocio]
+    pergunta: Como atuava na estratégia de produto?
+    resposta: >
+      Coletava e filtrava o feedback da comunidade e propunha recursos equilibrando a experiência
+      do usuário e a receita, validando a viabilidade com o dev. Exemplos: um item que eliminava
+      um risco de perda que gerava frustração, pacotes promocionais para monetização e a
+      reativação de áreas abandonadas para dar progressão gratuita a novos usuários, apoiando a
+      retenção.
+
+  # ---------- Izzat Express ----------
+  - id: bugs_izzat
+    empresa: Izzat Express
+    tags: [bug, ecommerce, ui, notion, trello]
+    pergunta: Como funcionava o reporte de bugs na Izzat?
+    resposta: >
+      Empresa de dropshipping com ~6 pessoas. Reportava bugs do site direto ao CEO (descrições
+      divergentes do produto, formatação quebrada, produtos duplicados no catálogo), organizando
+      e acompanhando as demandas em Notion e Trello.
+
+  - id: manual_suporte
+    empresa: Izzat Express
+    tags: [documentacao, suporte, processo, metricas]
+    pergunta: Qual projeto de destaque na Izzat?
+    resposta: >
+      Um console portátil gerava muitos chamados sobre jogos específicos. Criei um manual com os
+      ~40-50 títulos mais buscados e alinhei com o fornecedor o envio junto com o produto. Os
+      chamados sobre o tema caíram de 8 em 10 para 1-2 em 10 (~90%), liberando a equipe para
+      qualidade e pós-venda.
+
+  # ---------- Mil Vidas ----------
+  - id: integracao_mil_vidas
+    empresa: Mil Vidas
+    tags: [integracao, dados, ecommerce, erp, consistencia]
+    pergunta: Validou integrações entre sistemas?
+    resposta: >
+      Pelo menos uma vez por semana, validava a sincronização entre ERP (Bling), SGI e marketplaces:
+      estoque, preços, fotos e publicação de produtos. Encontrei divergências entre o estoque do
+      marketplace e o físico que geravam vendas de itens indisponíveis, cancelamentos e queda de
+      reputação. Rastreava pedidos fantasmas e preços dessincronizados e fazia ressincronizações.
+
+  # ---------- Técnico ----------
+  - id: playwright
+    tags: [playwright, python, automacao, ia]
+    pergunta: Qual seu nível em Playwright?
+    resposta: >
+      Em aprendizado. Desenvolvi a auditoria automatizada de um e-commerce real (preços, títulos e
+      quantidade de fotos). Usei IA como apoio na escrita do código e li cada parte para entendê-la.
+
+  - id: api_tripleten
+    tags: [api, postman, valor_limite, jira]
+    pergunta: Experiência com testes de API?
+    resposta: >
+      Testes de POST e DELETE no Postman validando o parâmetro ID (nulo, vazio, string, caractere
+      especial, muito longo), que revelaram respostas indevidas 200 OK e 500 Internal Server Error,
+      registradas no Jira.
+
+  - id: tecnicas_tripleten
+    tags: [manual, equivalencia, valor_limite, layout, cross_browser, jira]
+    pergunta: Quais técnicas praticou na TripleTen?
+    resposta: >
+      Casos de teste e relatórios de bug, classes de equivalência e valor limite (formulário de
+      cartão, com 15 bugs no Jira), testes de layout cross-browser (Chrome 800x600 e Firefox
+      1920x1080) e um projeto final integrando UI e API.
+
+  - id: n8n_docker
+    tags: [n8n, docker, ia, automacao]
+    pergunta: Usa IA ou Docker na prática?
+    resposta: >
+      Criei sozinho uma automação em n8n, rodando em Docker, que busca vagas, aplica filtros,
+      compara com meu currículo usando IA e atribui uma nota de aderência. Ela está em produção
+      e funciona como projetada.
+
+preferencias:
+  nivel: QA Júnior
+  local: Guarulhos - SP
+  modelo: [remoto, hibrido, presencial em Guarulhos/São Paulo]
+  foco: [testes manuais, regressao, automacao, testes de API, testes com apoio de IA]
+  evitar: [mobile, banco de dados como foco principal]
+  idioma_cv: pt-BR
+
+# Proibido a IA afirmar experiência nestes itens
+limites:
+  nao_usou: [Cypress, Robot Framework, Allure, BDD/Gherkin, GitHub Actions, CI/CD, Charles Proxy]
+  em_aprendizado: [fixtures, trace viewer, execução paralela, Playwright request/API]
+  nao_especialista: [SQL avançado, desenvolvimento de software]
+  ingles: Intermediário (leitura e compreensão), sem conversação profissional

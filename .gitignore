@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+output/
+.idea/
+data/pessoal.yaml
+.env
+data/base_norm.yaml
+data/cv_vaga.backup.yaml
+reports/execucoes/
+.pytest_cache/
+data/cv_vaga.yaml
+data/resumos_aprovados.yaml
+data/vagas/
+reports/

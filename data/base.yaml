@@ -1,0 +1,159 @@
+titulos:
+  - QA Tester
+  - QA Engineer Júnior
+  - Analista de QA Júnior
+  - Analista de Testes Júnior
+
+resumos:
+  geral: >
+    Analista de QA júnior com vivência real em testes de games (NyxCom) e validação de
+    integrações em e-commerce, formado pela TripleTen (285h, 9 projetos). Testes manuais,
+    exploratórios e de regressão, técnicas de classes de equivalência e valor limite,
+    registro de bugs no Jira e testes de API com Postman.
+  automacao: >
+    QA júnior com automação em Python usando Selenium (POM + Pytest) e Playwright, aplicada
+    em auditoria de e-commerce real. Construo automações com n8n + Docker e uso IA
+    como apoio em pesquisa e aprendizado.
+  api: >
+    QA júnior com testes de API REST no Postman (POST/DELETE, validação de parâmetros,
+    status codes 200/500) e validação de integrações entre sistemas (Bling, SGI e marketplaces).
+  manual: >
+    QA júnior com base sólida em testes funcionais, exploratórios e de regressão. Encontrei
+    2 falhas críticas de economia em um MMORPG antes de chegarem à produção.
+
+experiencias:
+  - id: milvidas
+    cargo: Proprietário
+    empresa: Loja Mil Vidas (e-commerce de livros)
+    inicio: 06/2023
+    fim: 05/2026
+    bullets:
+      - id: mil_integracao
+        tags: [integracao, dados, api]
+        texto: >
+          Validei semanalmente a integração de dados entre ERP (Bling), SGI e marketplaces (estoque,
+          preço e imagens), identificando divergências que geravam vendas de produtos indisponíveis.
+      - id: mil_ressync
+        tags: [dados, regressao]
+        texto: >
+          Corrigi inconsistências de estoque e preço por ressincronização, reduzindo cancelamentos
+          e protegendo a reputação da loja nos marketplaces.
+
+  - id: izzat
+    cargo: Gestor de Equipe e Atendimento
+    empresa: Izzat Express
+    inicio: 03/2022
+    fim: 12/2024
+    bullets:
+      - id: izzat_bugs_site
+        tags: [funcional, ui, manual, bug]
+        texto: >
+          Identifiquei e reportei bugs no site (descrições incorretas, layout quebrado, produtos
+          duplicados), com acompanhamento das correções no Notion e no Trello.
+      - id: izzat_manual
+        tags: [documentacao, suporte, negocio]
+        texto: >
+          Criei documentação de produto para o cliente e alinhei o processo com o fornecedor,
+          reduzindo em ~90% os chamados de suporte sobre o tema.
+      - id: izzat_reclame_aqui
+        tags: [suporte, qualidade, negocio]
+        texto: >
+          Mantive 95% de índice de solução no Reclame Aqui com suporte preventivo e acompanhamento de KPIs.
+      - id: izzat_faturamento
+        tags: [negocio, resultado]
+        texto: >
+          Participei da reestruturação operacional que levou o faturamento mensal de R$ 140 mil para R$ 1 milhão.
+
+  - id: nyxcom
+    cargo: Analista de QA
+    empresa: NyxCom (jogo online MMORPG)
+    inicio: 03/2017
+    fim: 12/2021
+    bullets:
+      - id: nyx_loja_offline
+        tags: [exploratorio, funcional, bug_critico, manual]
+        texto: >
+          Identifiquei, em testes exploratórios, um bug crítico de duplicação de itens no sistema
+          de comércio, corrigido antes do release, com zero ocorrências em produção.
+      - id: nyx_yang_overflow
+        tags: [exploratorio, bug_critico, banco_dados]
+        texto: >
+          Detectei uma falha de cálculo que gerava ganho de moeda 10x acima do previsto,
+          reportada e corrigida rapidamente, preservando a economia do jogo.
+      - id: nyx_regressao
+        tags: [regressao, funcional, manual]
+        texto: >
+          Executei testes de regressão a cada atualização (quinzenal ou semanal), validando
+          as funcionalidades principais antes de cada release.
+      - id: nyx_logs
+        tags: [logs, debugging, reteste]
+        texto: >
+          Analisei logs de erro do servidor para investigar a causa raiz dos bugs, reproduzi
+          falhas e fiz o reteste das correções.
+      - id: nyx_sql
+        tags: [sql, banco_dados]
+        texto: >
+          Fiz consultas SQL (MySQL) para validar configurações e regras de negócio e
+          priorizar o escopo dos testes.
+      - id: nyx_produto
+        tags: [produto, ux, negocio]
+        texto: >
+          Transformei o feedback dos usuários em melhorias de produto, contribuindo para
+          a retenção de novos jogadores.
+
+projetos:
+  - id: sebo_playwright
+    nome: Auditoria de QA em E-commerce Real (Playwright)
+    tags: [playwright, python, automacao, jira, ui]
+    link: https://github.com/brunnoc-04/projeto-pac-qa-sebo-auditoria
+    texto: >
+      Construí 23 casos de teste (equivalência, valor limite) e uma automação em Playwright que
+      audita catálogo, preços e fotos de uma loja real, com bugs registrados no Jira.
+  - id: urban_routes
+    nome: Automação Web – Urban Routes
+    tags: [selenium, python, pytest, pom, automacao]
+    link: https://github.com/brunnoc-04/QA-Brazil_Python_Automation
+    texto: >
+      Fiz a automação do fluxo de pedido com Selenium + Pytest no padrão POM, interceptando o código SMS via CDP.
+  - id: urban_scooter
+    nome: Testes Web e API – Urban Scooter
+    tags: [api, postman, cross_browser, manual]
+    link: https://github.com/brunnoc-04/qa-web-api-testing-urban-scooter
+    texto: >
+      Testei o front cross-browser (Chrome/Opera) e a API Courier (POST/DELETE) no Postman, com bugs reportados no Jira.
+  - id: chicago_taxi
+    nome: Testes de Banco de Dados – Chicago Taxi
+    tags: [sql, banco_dados, linux]
+    link: https://github.com/brunnoc-04/qa-database-testing-chicago-taxi
+    texto: >
+      Fiz consultas SQL (PostgreSQL) para auditar dados e analisei logs via Linux CLI.
+
+
+formacao:
+  - id: tripleten
+    curso: Analista de QA – Programa Intensivo (285h)
+    instituicao: TripleTen
+    inicio: 04/2026
+    fim: 09/2026
+
+skills:
+  - {nome: Testes Funcionais, tags: [manual, funcional]}
+  - {nome: Testes Exploratórios, tags: [manual, exploratorio]}
+  - {nome: Testes de Regressão, tags: [regressao]}
+  - {nome: Classes de Equivalência e Valor Limite, tags: [manual]}
+  - {nome: Python, tags: [automacao, python]}
+  - {nome: Playwright, tags: [automacao, playwright]}
+  - {nome: Selenium + POM, tags: [automacao, selenium]}
+  - {nome: Pytest, tags: [automacao, pytest]}
+  - {nome: Postman / API REST, tags: [api]}
+  - {nome: SQL (PostgreSQL/MySQL), tags: [sql, banco_dados]}
+  - {nome: Jira, tags: [jira, bug]}
+  - {nome: Git / GitHub, tags: [git]}
+  - {nome: Docker, tags: [docker]}
+  - {nome: n8n, tags: [n8n, ia]}
+  - {nome: Chrome DevTools, tags: [ui, debugging]}
+
+idiomas:
+  - {idioma: Português, nivel: Nativo}
+  - {idioma: Inglês, nivel: Intermediário (leitura e compreensão)}
+  - {idioma: Espanhol, nivel: Intermediário (leitura e compreensão)}
