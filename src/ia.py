@@ -33,7 +33,12 @@ TERMOS_INFLADOS = [
     r"entregas? contínuas?", r"especializad[oa]s?", r"especialista",
     r"integraç(ão|ões) complexas?", r"soluç(ão|ões) críticas?",
     r"eficientes?", r"robust[oa]s?", r"garantir (a )?qualidade",
+    r"s[óo]lid[oa]s? (experi[êe]ncia|conhecimento)",  # 🆕 perfil júnior
+    r"(ampla|vasta) experi[êe]ncia",                   # 🆕
 ]
+
+# 🆕 Técnicas de teste exigidas no resumo "manual" (palavra-chave de ATS)
+TECNICAS_TESTE = [r"valor(es)? limite", r"classes? de equival[êe]ncia"]
 
 # Termos que indicam que a vaga pede automação
 TERMOS_AUTOMACAO = [
@@ -92,6 +97,11 @@ def contar(texto: str, padroes: list[str]) -> int:
     return sum(len(re.findall(p, texto)) for p in padroes)
 
 
+def tem_termo_inflado(texto: str) -> bool:  # 🆕
+    baixo = texto.lower()
+    return any(re.search(t, baixo) for t in TERMOS_INFLADOS)
+
+
 def vaga_pede_automacao(vaga: str) -> bool:
     return contar(vaga.lower(), TERMOS_AUTOMACAO) > 0
 
@@ -104,8 +114,28 @@ def escolher_vaga() -> Path:
         return caminho if caminho.is_absolute() else ROOT / caminho
     vagas = sorted(VAGAS.glob("*.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not vagas:
-        raise FileNotFoundError(f"Nenhuma vaga .txt encontrada em {VAGAS}")
+        print(f"❌ Nenhuma vaga .txt encontrada em {VAGAS}")  # 🆕 sem traceback
+        sys.exit(1)
     return vagas[0]
+
+
+def validar_vaga(arquivo_vaga: Path):  # 🆕
+    """Sai com mensagem amigável se o arquivo não existir, listando as vagas disponíveis."""
+    if arquivo_vaga.exists():
+        return
+    print(f"❌ Arquivo não encontrado: {arquivo_vaga}")
+    print("📂 Vagas disponíveis:")
+    for v in sorted(VAGAS.glob("*.txt")):
+        print(f"   - {v.relative_to(ROOT)}")
+    sys.exit(1)
+
+
+def confirmar_vaga(arquivo_vaga: Path, foco: str):  # 🆕
+    """Confirma a vaga ANTES de chamar a IA (nada é alterado se cancelar)."""
+    resp = input(f"❓ Gerar CV para '{arquivo_vaga.name}' (foco: {foco})? [Enter = sim | n = cancelar]: ")
+    if resp.strip().lower() == "n":
+        print("🚫 Cancelado. Nada foi alterado.")
+        sys.exit(0)
 
 
 def sugerir_resumo(vaga: str) -> str:
@@ -179,7 +209,9 @@ def salvar_aprovado(foco: str, texto: str, vaga_nome: str):
 
 
 def exemplos_aprovados(foco: str) -> str:
-    lista = carregar_banco().get(foco, [])[-MAX_EXEMPLOS:]
+    # 🆕 ignora exemplos antigos com termos agora proibidos (ex.: "sólida experiência")
+    lista = [i for i in carregar_banco().get(foco, []) if not tem_termo_inflado(i["texto"])]
+    lista = lista[-MAX_EXEMPLOS:]
     if not lista:
         return ""
     itens = "\n".join(f"- {item['texto']}" for item in lista)
@@ -205,6 +237,7 @@ REGRAS OBRIGATÓRIAS:
 - Se a vaga pedir algo que o candidato não tem, NÃO inclua.
 - PRESERVE todas as métricas e números (ex.: 2 falhas críticas, 95%, ~90%, 10x, 23 casos, R$ 140 mil → R$ 1 milhão, 285h).
 - No resumo "manual", mantenha a frase com "2 falhas críticas".
+- No resumo "manual", cite OBRIGATORIAMENTE o Jira e pelo menos uma técnica de teste (valor limite ou classes de equivalência).
 - No resumo "geral", mantenha a menção à NyxCom.
 - Escreva em primeira pessoa implícita ("Construo", "Identifiquei"), nunca em forma impessoal ("Construção").
 - Escreva em português correto e natural. Releia cada frase: nada de palavras soltas ou sem sentido.
@@ -228,7 +261,7 @@ RESUMOS (MUITO IMPORTANTE):
   na NyxCom (2017–2021), a formação TripleTen (285h) e pelo menos 1 RESULTADO com número do BASE.
 - "285h" e "9 projetos" NÃO contam como resultado. Use: 10x, 23 casos de teste, ~90%, 95%, 2 falhas críticas.
 - Foco: "automacao" = Python, Playwright, Selenium, Pytest, POM; "api" = Postman, API REST, SQL, logs;
-  "manual" = testes funcionais, exploratórios, regressão, Jira; "geral" = visão equilibrada.
+  "manual" = testes funcionais, exploratórios, regressão, Jira, valor limite, classes de equivalência; "geral" = visão equilibrada.
 - Se mencionar IA, escreva "uso IA como apoio em pesquisa e aprendizado". Nunca "suporte de IA".
 {exemplos_aprovados(foco)}
 IDIOMAS:
@@ -238,7 +271,8 @@ TOM:
 - O candidato é JÚNIOR. Seja concreto e honesto, sem exagerar o nível.
 - PROIBIDO: "engenharia de qualidade", "alta criticidade", "escalabilidade", "entrega(s) contínua(s)",
   "especializado", "especialista", "integrações complexas", "soluções críticas", "eficiente(s)",
-  "robusto(s)", "garantir qualidade". Troque adjetivos por FATOS.
+  "robusto(s)", "garantir qualidade", "sólida experiência", "ampla experiência", "vasta experiência".
+  Troque adjetivos por FATOS (ex.: "experiência prática em...").
 
 Responda SOMENTE com YAML válido, com exatamente as mesmas chaves do BASE.
 
@@ -284,6 +318,11 @@ def problemas_resumo(cv: dict, automacao: bool) -> list[str]:
         frase = FRASES_OBRIGATORIAS.get(chave)
         if frase and frase not in baixo:
             erros.append(f'- Resumo "{chave}" precisa conter EXATAMENTE "{frase}" (verifique a ortografia).')
+        if chave == "manual":  # 🆕 palavras-chave de ATS
+            if "jira" not in baixo:
+                erros.append('- Resumo "manual" precisa citar o Jira.')
+            if not any(re.search(t, baixo) for t in TECNICAS_TESTE):
+                erros.append('- Resumo "manual" precisa citar uma técnica: valor limite ou classes de equivalência.')
 
     texto_total = yaml.safe_dump(cv, allow_unicode=True, width=10_000).lower()
     for termo in TERMOS_INFLADOS:
@@ -348,6 +387,10 @@ def regerar_resumo(arquivo_vaga: Path, foco: str):
     regra_auto = "- Cite Python E Playwright ligados a um fato do BASE." if automacao else ""
     obrigatoria = FRASES_OBRIGATORIAS.get(foco)
     regra_frase = f'- Contenha EXATAMENTE "{obrigatoria}".' if obrigatoria else ""
+    regra_manual = (  # 🆕
+        "- Cite o Jira e pelo menos uma técnica (valor limite ou classes de equivalência)."
+        if foco == "manual" else ""
+    )
 
     prompt_base = f"""
 Reescreva o resumo profissional "{foco}" de um QA JÚNIOR para a vaga abaixo.
@@ -360,7 +403,8 @@ REGRAS:
 - Use os mesmos termos da vaga quando o candidato tiver a habilidade.
 {regra_auto}
 {regra_frase}
-- Sem: especialista, robusto, eficiente, garantir qualidade, escalabilidade.
+{regra_manual}
+- Sem: especialista, robusto, eficiente, garantir qualidade, escalabilidade, sólida/ampla/vasta experiência.
 {exemplos_aprovados(foco)}
 Responda SOMENTE com o texto do resumo, sem aspas e sem markdown.
 
@@ -423,6 +467,7 @@ def revisar_resumo(arquivo_vaga: Path, foco: str):
 # ---------- Pipeline completo ----------
 def main():
     arquivo_vaga = escolher_vaga()
+    validar_vaga(arquivo_vaga)  # 🆕 antes de qualquer leitura
     foco = sugerir_resumo(ler(arquivo_vaga))
     so_pdf = "--so-pdf" in sys.argv
     print(f"📄 Vaga: {arquivo_vaga.name}")
@@ -431,6 +476,7 @@ def main():
     if so_pdf:
         print("✏️ Modo --so-pdf: usando o cv_vaga.yaml atual (sem gerar com IA).")
     else:
+        confirmar_vaga(arquivo_vaga, foco)  # 🆕 antes de gastar chamada de IA
         gerar(arquivo_vaga, foco)
 
     revisar_resumo(arquivo_vaga, foco)
