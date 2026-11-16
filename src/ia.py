@@ -185,14 +185,16 @@ def nome_da_vaga(arquivo_vaga: Path) -> str:
 
 
 def restaurar_textos(cv: dict, base: dict) -> dict:
-    """Texto de bullets/projetos volta ao original; experiências ficam na ordem do BASE."""
+    """Tudo que é FATO volta ao BASE. A IA só pode reordenar (e escrever os resumos)."""
+    base = limpar(base)  # 🆕 v4 remove quebras do '>' do YAML
+
+    # Bullets e projetos: texto original
     originais = {}
     for exp in base.get("experiencias", []):
         for b in exp.get("bullets", []):
             originais[b["id"]] = b["texto"]
     for p in base.get("projetos", []):
         originais[p["id"]] = p["texto"]
-    originais = limpar(originais)
 
     for exp in cv.get("experiencias", []):
         for b in exp.get("bullets", []):
@@ -202,11 +204,37 @@ def restaurar_textos(cv: dict, base: dict) -> dict:
         if isinstance(p, dict) and p.get("id") in originais:
             p["texto"] = originais[p["id"]]
 
+    # Experiências na ordem do BASE
     ordem = [e["id"] for e in base.get("experiencias", [])]
     cv["experiencias"] = sorted(
         cv.get("experiencias", []),
         key=lambda e: ordem.index(e["id"]) if e.get("id") in ordem else len(ordem),
     )
+
+    # 🆕 v4 Projetos: nome e link sempre do BASE (a IA só reordena)
+    projetos_base = {p["id"]: p for p in base.get("projetos", [])}
+    cv["projetos"] = [
+        {**p, "nome": projetos_base[p["id"]]["nome"], "link": projetos_base[p["id"]]["link"]}
+        for p in cv.get("projetos", [])
+        if isinstance(p, dict) and p.get("id") in projetos_base
+    ]
+
+    # 🆕 v4 Skills: a IA só REORDENA. Nome inventado/renomeado é descartado.
+    skills_base = {s["nome"]: s for s in base.get("skills", [])}
+    escolhidas = [s.get("nome") for s in cv.get("skills", []) if isinstance(s, dict)]
+    ordem_ia = [n for n in dict.fromkeys(escolhidas) if n in skills_base]
+    inventadas = [n for n in escolhidas if n not in skills_base]
+    if inventadas:
+        print(f"🛡️ Skills fora do BASE descartadas: {inventadas}")
+    cv["skills"] = [skills_base[n] for n in ordem_ia] + [
+        s for n, s in skills_base.items() if n not in ordem_ia
+    ]
+
+    # 🆕 v4 Idiomas e formação: sempre idênticos ao BASE
+    for chave in ("idiomas", "formacao"):
+        if chave in base:
+            cv[chave] = base[chave]
+
     return cv
 
 
@@ -274,6 +302,7 @@ REGRAS OBRIGATÓRIAS:
 - Os 23 casos de teste foram CONSTRUÍDOS pelo candidato. NUNCA escreva que a automação "gerou", "obteve", "resultou em" ou foi feita "com 23 casos". Correto: "Construí 23 casos de teste e automatizei com Playwright a auditoria...".
 - Escreva em primeira pessoa implícita ("Construo", "Identifiquei"), nunca em forma impessoal ("Construção").
 - Escreva em português correto e natural. Releia cada frase: nada de palavras soltas ou sem sentido.
+- Cada número deve ficar ligado ao fato ORIGINAL do BASE (ex.: 10x é a falha de cálculo de moeda na NyxCom; nunca use 10x para API ou status codes).
 
 BULLETS E PROJETOS:
 - NÃO reescreva o texto de bullets nem de projetos. Copie o "texto" EXATAMENTE como está no BASE.
@@ -285,6 +314,7 @@ ADAPTAÇÃO À VAGA (ATS):
 - Nos RESUMOS, use os MESMOS TERMOS da vaga quando o candidato tiver aquela habilidade.
 {regra_automacao}
 - Ordene "skills" colocando primeiro as que a vaga pede e o candidato tem.
+- Copie cada "nome" de skill EXATAMENTE como está no BASE: nunca renomeie, junte, divida ou crie skills.
 
 RESUMOS (MUITO IMPORTANTE):
 - Os resumos do BASE são CURTOS DEMAIS. EXPANDA cada um.
@@ -293,6 +323,7 @@ RESUMOS (MUITO IMPORTANTE):
 - Cada resumo deve combinar: ferramentas ligadas ao foco, a experiência como Analista de QA
   na NyxCom (2017–2021), a formação TripleTen (285h) e pelo menos 1 RESULTADO com número do BASE.
 - "285h" e "9 projetos" NÃO contam como resultado. Use: 10x, 23 casos de teste, ~90%, 95%, 2 falhas críticas.
+- Não repita a mesma frase ou expressão duas vezes no mesmo resumo.
 - Foco: "automacao" = Python, Playwright, Selenium, Pytest, POM; "api" = Postman, API REST, SQL, logs;
   "manual" = testes funcionais, exploratórios, regressão, Jira, valor limite, classes de equivalência; "geral" = visão equilibrada.
 - Se mencionar IA, escreva "uso IA como apoio em pesquisa e aprendizado". Nunca "suporte de IA".
@@ -348,7 +379,6 @@ def chamar_ia_texto(prompt: str, temperatura: float = 0.2) -> str:
                 time.sleep(espera)
     print("❌ Gemini indisponível no momento. Nada foi alterado. Tente de novo em alguns minutos.")
     sys.exit(1)
-
 
 
 def chamar_ia(prompt: str) -> dict:
@@ -436,6 +466,13 @@ def gerar(arquivo_vaga: Path, foco: str) -> dict:
     return cv
 
 
+def sanear_cv_atual():  # 🆕 v4
+    """Modo --so-pdf: aplica as mesmas proteções ao cv_vaga.yaml existente (resumos não mudam)."""
+    base = yaml.safe_load(ler(DATA / "base.yaml"))
+    cv = yaml.safe_load(ler(CV_VAGA))
+    salvar_yaml(CV_VAGA, restaurar_textos(cv, base))
+
+
 # ---------- Revisão humana do resumo ----------
 def regerar_resumo(arquivo_vaga: Path, foco: str):
     """Pede à IA um resumo NOVO só para o foco atual. O resto do CV não muda."""
@@ -459,7 +496,8 @@ O candidato REJEITOU esta versão: "{atual}". Faça uma versão DIFERENTE e melh
 REGRAS:
 - 3 a 4 frases, entre {MIN_RESUMO} e {MAX_RESUMO} caracteres, português correto e natural.
 - Use só fatos do BASE. Inclua a NyxCom (2017–2021), a TripleTen (285h) e 1 resultado numérico
-  (10x, 23 casos de teste, ~90%, 95%, 2 falhas críticas).
+  (10x, 23 casos de teste, ~90%, 95%, 2 falhas críticas), ligado ao fato ORIGINAL do BASE.
+- Não repita a mesma frase ou expressão duas vezes.
 - Use os mesmos termos da vaga quando o candidato tiver a habilidade.
 {regra_auto}
 {regra_frase}
@@ -537,6 +575,7 @@ def main():
 
     if so_pdf:
         print("✏️ Modo --so-pdf: usando o cv_vaga.yaml atual (sem gerar com IA).")
+        sanear_cv_atual()  # 🆕 v4
     else:
         confirmar_vaga(arquivo_vaga, foco)
         gerar(arquivo_vaga, foco)
