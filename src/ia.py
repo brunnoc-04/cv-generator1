@@ -3,11 +3,14 @@ import re
 import sys
 import shutil
 import subprocess
+import importlib.util
 import yaml
 from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
+import time
+from google.genai import types, errors
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -33,11 +36,11 @@ TERMOS_INFLADOS = [
     r"entregas? contínuas?", r"especializad[oa]s?", r"especialista",
     r"integraç(ão|ões) complexas?", r"soluç(ão|ões) críticas?",
     r"eficientes?", r"robust[oa]s?", r"garantir (a )?qualidade",
-    r"s[óo]lid[oa]s? (experi[êe]ncia|conhecimento)",  # 🆕 perfil júnior
-    r"(ampla|vasta) experi[êe]ncia",                   # 🆕
+    r"s[óo]lid[oa]s? (experi[êe]ncia|conhecimento)",
+    r"(ampla|vasta) experi[êe]ncia",
 ]
 
-# 🆕 Técnicas de teste exigidas no resumo "manual" (palavra-chave de ATS)
+# Técnicas de teste exigidas no resumo "manual" (palavra-chave de ATS)
 TECNICAS_TESTE = [r"valor(es)? limite", r"classes? de equival[êe]ncia"]
 
 # Termos que indicam que a vaga pede automação
@@ -61,6 +64,22 @@ FRASES_OBRIGATORIAS = {
     "manual": "2 falhas críticas",
     "geral": "nyxcom",
 }
+
+
+# 🆕 v2 — Regras de fidelidade: FONTE ÚNICA = tests/test_cv_vaga.py
+def _regras_dos_testes():
+    try:
+        spec = importlib.util.spec_from_file_location("regras_cv", ROOT / "tests" / "test_cv_vaga.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.ATRIBUICOES_ERRADAS, mod.CASOS_COMO_RESULTADO, mod.TERMOS_INFLADOS
+    except Exception as e:
+        print(f"⚠️ Regras dos testes não carregadas ({e}); usando só as do ia.py.")
+        return [], None, []
+
+
+ATRIBUICOES_ERRADAS, CASOS_COMO_RESULTADO, _TERMOS_TESTE = _regras_dos_testes()
+TERMOS_INFLADOS = list(dict.fromkeys(TERMOS_INFLADOS + list(_TERMOS_TESTE)))  # 🆕 v2 sem duplicatas
 
 
 # ---------- Utilidades ----------
@@ -97,7 +116,7 @@ def contar(texto: str, padroes: list[str]) -> int:
     return sum(len(re.findall(p, texto)) for p in padroes)
 
 
-def tem_termo_inflado(texto: str) -> bool:  # 🆕
+def tem_termo_inflado(texto: str) -> bool:
     baixo = texto.lower()
     return any(re.search(t, baixo) for t in TERMOS_INFLADOS)
 
@@ -114,12 +133,12 @@ def escolher_vaga() -> Path:
         return caminho if caminho.is_absolute() else ROOT / caminho
     vagas = sorted(VAGAS.glob("*.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not vagas:
-        print(f"❌ Nenhuma vaga .txt encontrada em {VAGAS}")  # 🆕 sem traceback
+        print(f"❌ Nenhuma vaga .txt encontrada em {VAGAS}")
         sys.exit(1)
     return vagas[0]
 
 
-def validar_vaga(arquivo_vaga: Path):  # 🆕
+def validar_vaga(arquivo_vaga: Path):
     """Sai com mensagem amigável se o arquivo não existir, listando as vagas disponíveis."""
     if arquivo_vaga.exists():
         return
@@ -130,7 +149,7 @@ def validar_vaga(arquivo_vaga: Path):  # 🆕
     sys.exit(1)
 
 
-def confirmar_vaga(arquivo_vaga: Path, foco: str):  # 🆕
+def confirmar_vaga(arquivo_vaga: Path, foco: str):
     """Confirma a vaga ANTES de chamar a IA (nada é alterado se cancelar)."""
     resp = input(f"❓ Gerar CV para '{arquivo_vaga.name}' (foco: {foco})? [Enter = sim | n = cancelar]: ")
     if resp.strip().lower() == "n":
@@ -208,9 +227,21 @@ def salvar_aprovado(foco: str, texto: str, vaga_nome: str):
     print(f"💾 Resumo aprovado salvo no banco ({foco}): {BANCO.name}")
 
 
+def _exemplo_valido(texto: str) -> bool:  # 🆕 v2
+    """Exemplo do banco só serve de referência se passar em TODAS as regras de fidelidade."""
+    baixo = texto.lower()
+    if tem_termo_inflado(baixo):
+        return False
+    if any(re.search(p, baixo) for p in ATRIBUICOES_ERRADAS):
+        return False
+    if CASOS_COMO_RESULTADO and re.search(CASOS_COMO_RESULTADO, baixo):
+        return False
+    return True
+
+
 def exemplos_aprovados(foco: str) -> str:
-    # 🆕 ignora exemplos antigos com termos agora proibidos (ex.: "sólida experiência")
-    lista = [i for i in carregar_banco().get(foco, []) if not tem_termo_inflado(i["texto"])]
+    # 🆕 v2 ignora exemplos antigos que violam qualquer regra atual
+    lista = [i for i in carregar_banco().get(foco, []) if _exemplo_valido(i["texto"])]
     lista = lista[-MAX_EXEMPLOS:]
     if not lista:
         return ""
@@ -239,6 +270,8 @@ REGRAS OBRIGATÓRIAS:
 - No resumo "manual", mantenha a frase com "2 falhas críticas".
 - No resumo "manual", cite OBRIGATORIAMENTE o Jira e pelo menos uma técnica de teste (valor limite ou classes de equivalência).
 - No resumo "geral", mantenha a menção à NyxCom.
+- Cada fato pertence à experiência onde está no BASE. NUNCA atribua a uma empresa algo feito em outra (ex.: integrações NÃO foram na NyxCom).
+- Os 23 casos de teste foram CONSTRUÍDOS pelo candidato. NUNCA escreva que a automação "gerou", "obteve", "resultou em" ou foi feita "com 23 casos". Correto: "Construí 23 casos de teste e automatizei com Playwright a auditoria...".
 - Escreva em primeira pessoa implícita ("Construo", "Identifiquei"), nunca em forma impessoal ("Construção").
 - Escreva em português correto e natural. Releia cada frase: nada de palavras soltas ou sem sentido.
 
@@ -271,7 +304,8 @@ TOM:
 - O candidato é JÚNIOR. Seja concreto e honesto, sem exagerar o nível.
 - PROIBIDO: "engenharia de qualidade", "alta criticidade", "escalabilidade", "entrega(s) contínua(s)",
   "especializado", "especialista", "integrações complexas", "soluções críticas", "eficiente(s)",
-  "robusto(s)", "garantir qualidade", "sólida experiência", "ampla experiência", "vasta experiência".
+  "robusto(s)", "garantir qualidade", "sólida experiência", "base sólida", "sólido(a)",
+  "ampla experiência", "vasta experiência".
   Troque adjetivos por FATOS (ex.: "experiência prática em...").
 
 Responda SOMENTE com YAML válido, com exatamente as mesmas chaves do BASE.
@@ -288,13 +322,33 @@ Responda SOMENTE com YAML válido, com exatamente as mesmas chaves do BASE.
 
 
 # ---------- IA ----------
+CODIGOS_TEMPORARIOS = {429, 500, 502, 503, 504}  # 🆕 v3 erros que valem nova tentativa
+ESPERAS = [5, 15, 30]  # 🆕 v3 segundos entre tentativas (backoff)
+
+
 def chamar_ia_texto(prompt: str, temperatura: float = 0.2) -> str:
-    resp = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=temperatura),
-    )
-    return resp.text.strip()
+    """Chama o Gemini com retry. Se o modelo principal falhar, tenta o reserva (.env)."""
+    modelos = [MODEL] + ([os.getenv("GEMINI_MODEL_FALLBACK")] if os.getenv("GEMINI_MODEL_FALLBACK") else [])
+    for modelo in modelos:
+        for i, espera in enumerate(ESPERAS + [None], start=1):
+            try:
+                resp = client.models.generate_content(
+                    model=modelo,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(temperature=temperatura),
+                )
+                return resp.text.strip()
+            except errors.APIError as e:
+                if e.code not in CODIGOS_TEMPORARIOS:
+                    raise  # erro real (chave inválida, prompt errado...): não adianta repetir
+                if espera is None:
+                    print(f"⚠️ {modelo} indisponível após {i} tentativas.")
+                    break
+                print(f"⏳ {modelo} respondeu {e.code} (instável). Nova tentativa em {espera}s...")
+                time.sleep(espera)
+    print("❌ Gemini indisponível no momento. Nada foi alterado. Tente de novo em alguns minutos.")
+    sys.exit(1)
+
 
 
 def chamar_ia(prompt: str) -> dict:
@@ -318,11 +372,17 @@ def problemas_resumo(cv: dict, automacao: bool) -> list[str]:
         frase = FRASES_OBRIGATORIAS.get(chave)
         if frase and frase not in baixo:
             erros.append(f'- Resumo "{chave}" precisa conter EXATAMENTE "{frase}" (verifique a ortografia).')
-        if chave == "manual":  # 🆕 palavras-chave de ATS
+        if chave == "manual":
             if "jira" not in baixo:
                 erros.append('- Resumo "manual" precisa citar o Jira.')
             if not any(re.search(t, baixo) for t in TECNICAS_TESTE):
                 erros.append('- Resumo "manual" precisa citar uma técnica: valor limite ou classes de equivalência.')
+        for padrao in ATRIBUICOES_ERRADAS:  # 🆕 v2
+            achado = re.search(padrao, baixo)
+            if achado:
+                erros.append(f'- Resumo "{chave}": "{achado.group()}" atribui o fato à empresa errada. Confira no BASE onde isso aconteceu.')
+        if CASOS_COMO_RESULTADO and re.search(CASOS_COMO_RESULTADO, baixo):  # 🆕 v2
+            erros.append(f'- Resumo "{chave}": os 23 casos de teste foram CONSTRUÍDOS, não gerados pela automação. Use: "Construí 23 casos de teste e automatizei com Playwright...".')
 
     texto_total = yaml.safe_dump(cv, allow_unicode=True, width=10_000).lower()
     for termo in TERMOS_INFLADOS:
@@ -387,7 +447,7 @@ def regerar_resumo(arquivo_vaga: Path, foco: str):
     regra_auto = "- Cite Python E Playwright ligados a um fato do BASE." if automacao else ""
     obrigatoria = FRASES_OBRIGATORIAS.get(foco)
     regra_frase = f'- Contenha EXATAMENTE "{obrigatoria}".' if obrigatoria else ""
-    regra_manual = (  # 🆕
+    regra_manual = (
         "- Cite o Jira e pelo menos uma técnica (valor limite ou classes de equivalência)."
         if foco == "manual" else ""
     )
@@ -404,7 +464,9 @@ REGRAS:
 {regra_auto}
 {regra_frase}
 {regra_manual}
-- Sem: especialista, robusto, eficiente, garantir qualidade, escalabilidade, sólida/ampla/vasta experiência.
+- Sem: especialista, robusto, eficiente, garantir qualidade, escalabilidade, sólida/ampla/vasta experiência, base sólida.
+- Cada fato na empresa correta do BASE (integrações NÃO foram na NyxCom).
+- Os 23 casos de teste foram CONSTRUÍDOS, não gerados pela automação.
 {exemplos_aprovados(foco)}
 Responda SOMENTE com o texto do resumo, sem aspas e sem markdown.
 
@@ -467,7 +529,7 @@ def revisar_resumo(arquivo_vaga: Path, foco: str):
 # ---------- Pipeline completo ----------
 def main():
     arquivo_vaga = escolher_vaga()
-    validar_vaga(arquivo_vaga)  # 🆕 antes de qualquer leitura
+    validar_vaga(arquivo_vaga)
     foco = sugerir_resumo(ler(arquivo_vaga))
     so_pdf = "--so-pdf" in sys.argv
     print(f"📄 Vaga: {arquivo_vaga.name}")
@@ -476,7 +538,7 @@ def main():
     if so_pdf:
         print("✏️ Modo --so-pdf: usando o cv_vaga.yaml atual (sem gerar com IA).")
     else:
-        confirmar_vaga(arquivo_vaga, foco)  # 🆕 antes de gastar chamada de IA
+        confirmar_vaga(arquivo_vaga, foco)
         gerar(arquivo_vaga, foco)
 
     revisar_resumo(arquivo_vaga, foco)
