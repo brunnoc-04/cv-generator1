@@ -35,9 +35,12 @@ ATRIBUICOES_ERRADAS = [
     r"(mmorpg|10x|economia|falhas? críticas?)[^.]{0,40}\b(na|da|pela)\s+(loja\s+)?mil vidas",
 ]
 
-# Os 23 casos foram CONSTRUÍDOS, não "obtidos" pela automação
-CASOS_COMO_RESULTADO = r"automat\w+[^.]{0,120}(obtendo|gerando|resultando em|com)\s+23 casos"
-
+# Os 23 casos foram CONSTRUÍDOS, não "obtidos" pela automação.
+# Pega verbos ("gerando 23 casos") e parênteses ("Playwright (23 casos").
+CASOS_COMO_RESULTADO = (
+    r"automat\w+[^.]{0,120}"
+    r"((obtendo|gerando|resultando em|com)\s+|\(\s*)23 casos"
+)
 
 # ---------- Fixtures ----------
 @pytest.fixture(scope="module")
