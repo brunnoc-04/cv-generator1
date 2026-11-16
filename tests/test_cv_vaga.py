@@ -20,11 +20,23 @@ TERMOS_INFLADOS = [
     r"eficientes?",
     r"robust[oa]s?",
     r"garantir (a )?qualidade",
+    r"base s[óo]lida",
+    r"s[óo]lid[oa]s?",
+    r"(ampla|vasta) experi[êe]ncia",
 ]
 
 METRICAS_OBRIGATORIAS = ["285h", "~90%", "23 casos", "10x"]
 
 TIPOS_RESUMO = ["geral", "automacao", "api", "manual"]
+
+# Fatos atribuídos à empresa errada (ex.: integrações "na NyxCom")
+ATRIBUICOES_ERRADAS = [
+    r"(integraç\w+|bling|\bsgi\b|marketplaces?)[^.]{0,40}\b(na|da|pela)\s+nyxcom",
+    r"(mmorpg|10x|economia|falhas? críticas?)[^.]{0,40}\b(na|da|pela)\s+(loja\s+)?mil vidas",
+]
+
+# Os 23 casos foram CONSTRUÍDOS, não "obtidos" pela automação
+CASOS_COMO_RESULTADO = r"automat\w+[^.]{0,120}(obtendo|gerando|resultando em|com)\s+23 casos"
 
 
 # ---------- Fixtures ----------
@@ -98,6 +110,21 @@ def test_skills_existem_no_base(base, cv):
 def test_sem_termos_inflados(cv, termo):
     achado = re.search(termo, _texto_completo(cv))
     assert not achado, f"Termo inflado encontrado: '{achado.group()}'"
+
+
+# ---------- Fidelidade aos fatos ----------
+@pytest.mark.parametrize("chave", TIPOS_RESUMO)
+def test_fatos_nao_misturam_experiencias(cv, chave):
+    texto = cv["resumos"][chave].lower()
+    for padrao in ATRIBUICOES_ERRADAS:
+        achado = re.search(padrao, texto)
+        assert not achado, f"'{chave}': fato atribuído à empresa errada → '{achado.group()}'"
+
+
+@pytest.mark.parametrize("chave", TIPOS_RESUMO)
+def test_casos_de_teste_nao_sao_resultado_da_automacao(cv, chave):
+    achado = re.search(CASOS_COMO_RESULTADO, cv["resumos"][chave].lower())
+    assert not achado, f"'{chave}': distorce o fato da base → '{achado.group()}'"
 
 
 # ---------- Preservação ----------

@@ -7,7 +7,14 @@ import time
 from collections import Counter
 from datetime import datetime
 
-from ia import gerar, DATA, ROOT
+from ia import gerar, sugerir_resumo, ler, DATA, ROOT, VAGAS
+
+def vaga_mais_recente():
+    vagas = list(VAGAS.glob("*.txt"))
+    if not vagas:
+        sys.exit(f"❌ Nenhuma vaga .txt em {VAGAS}")
+    return max(vagas, key=lambda p: p.stat().st_mtime)
+
 
 REPORTS = ROOT / "reports"
 EXECUCOES = REPORTS / "execucoes"
